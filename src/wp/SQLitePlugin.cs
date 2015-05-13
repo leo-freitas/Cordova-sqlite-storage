@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -11,6 +11,9 @@ using SQLite;
 using WPCordovaClassLib.Cordova;
 using WPCordovaClassLib.Cordova.Commands;
 using WPCordovaClassLib.Cordova.JSON;
+using Windows.Storage;
+using Windows.ApplicationModel;
+using System.Threading.Tasks;
 
 namespace Cordova.Extension.Commands
 {
@@ -25,8 +28,11 @@ namespace Cordova.Extension.Commands
             [DataMember(IsRequired = true, Name = "name")]
             public string name { get; set; }
 
-            [DataMember(IsRequired = false, Name = "bgType", EmitDefaultValue = false)]
-            public int bgType = 0;
+            [DataMember(IsRequired = true, Name = "createFromResource")]
+            public bool createFromResource { get; set; }
+
+            [DataMember(IsRequired = false, Name = "location", EmitDefaultValue = false)]
+            public int location = 0;
         }
 
         [DataContract]
@@ -109,6 +115,8 @@ namespace Cordova.Extension.Commands
                 mycbid = jsonOptions[1];
 
                 var dbOptions = JsonHelper.Deserialize<SQLitePluginOpenOptions>(jsonOptions[0]);
+                System.Diagnostics.Debug.WriteLine("createFromResource: " + dbOptions.createFromResource);
+                this.databaseManager.setImportarBanco(dbOptions.createFromResource);
                 this.databaseManager.Open(dbOptions.name, mycbid);
             }
             catch (Exception)
@@ -179,10 +187,38 @@ namespace Cordova.Extension.Commands
             private readonly BaseCommand plugin;
             private readonly IDictionary<string, DBRunner> runners = new Dictionary<string, DBRunner>();
             private readonly object runnersLock = new object();
+            private bool importarBanco = false;
 
             public DatabaseManager(BaseCommand plugin)
             {
                 this.plugin = plugin;
+            }
+
+            public void setImportarBanco(bool importarBanco)
+            {
+                this.importarBanco = importarBanco;
+            }
+
+            public void copyDB(string dbname)
+            {
+                System.Diagnostics.Debug.WriteLine("dentro copydb.");
+                bool isDatabaseExisting = false;
+                string[] files = System.IO.Directory.GetFiles(ApplicationData.Current.LocalFolder.Path);
+                foreach (string s in files)
+                {
+                    string fileName = System.IO.Path.GetFileName(s);
+                    if (fileName == dbname)
+                    {
+                        isDatabaseExisting = true;
+                    }
+                }
+
+                if (!isDatabaseExisting)
+                {
+                    string destFile = System.IO.Path.Combine(ApplicationData.Current.LocalFolder.Path, dbname);
+                    System.IO.File.Copy(System.IO.Path.Combine(Package.Current.InstalledLocation.Path, "www\\" + dbname), destFile, true);
+                }
+                System.Diagnostics.Debug.WriteLine("fim copydb.");
             }
 
             public void Open(string dbname, string cbc)
@@ -190,6 +226,13 @@ namespace Cordova.Extension.Commands
                 DBRunner runner;
                 lock (runnersLock)
                 {
+                    if (importarBanco)
+                    {
+                        System.Diagnostics.Debug.WriteLine("vai copiar db.");
+                        importarBanco = false;
+                        copyDB(dbname);
+                        System.Diagnostics.Debug.WriteLine("depois copyDB.");
+                    }
                     if (!runners.TryGetValue(dbname, out runner))
                     {
                         runner = new DBRunner(this, dbname, cbc);
