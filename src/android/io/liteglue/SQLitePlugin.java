@@ -33,6 +33,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.lang.System;
 
 public class SQLitePlugin extends CordovaPlugin {
 
@@ -43,6 +44,7 @@ public class SQLitePlugin extends CordovaPlugin {
      */
     static ConcurrentHashMap<String, DBRunner> dbrmap = new ConcurrentHashMap<String, DBRunner>();
 
+    private
     /**
      * NOTE: Using default constructor, no explicit constructor.
      */
@@ -57,6 +59,13 @@ public class SQLitePlugin extends CordovaPlugin {
      */
     @Override
     public boolean execute(String actionAsString, JSONArray args, CallbackContext cbc) {
+
+        String arch = System.getProperty("os.arch");
+
+        if (arch.indexOf('armv6') != -1) {
+            Log.v("info", "Debug SqlitePlugin");
+            return new org.pgsqlite.SQLitePlugin().execute(actionAsString, args, cbc);
+        }
 
         Action action;
         try {

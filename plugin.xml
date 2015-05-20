@@ -48,6 +48,7 @@
         <source-file src="src/android/sqlite4java/libs/arm64-v8a/libsqlite4java-android-aarch64.so" target-dir="libs/arm64-v8a"/>
         <!-- NOT TESTED: -->
         <source-file src="src/android/sqlite4java/libs/x86_64/libsqlite4java-android-x86_64.so" target-dir="libs/x86_64"/>
+        <source-file src="src/android-classic/org/pgsqlite/SQLitePlugin.java" target-dir="src/org/pgsqlite"/>
 
     </platform>
 
