@@ -44,6 +44,7 @@ public class SQLitePlugin extends CordovaPlugin {
      */
     static ConcurrentHashMap<String, DBRunner> dbrmap = new ConcurrentHashMap<String, DBRunner>();
 
+    private org.pgsqlite.SQLitePlugin plugin = null;
     /**
      * NOTE: Using default constructor, no explicit constructor.
      */
@@ -63,8 +64,11 @@ public class SQLitePlugin extends CordovaPlugin {
 
         if (arch.indexOf("armv6") != -1) {
             Log.v("info", "Debug SqlitePlugin");
-            org.pgsqlite.SQLitePlugin plugin = new org.pgsqlite.SQLitePlugin();
-            plugin.privateInitialize(this.getServiceName(), this.cordova, this.webView, this.preferences);
+            if (plugin == null) {
+                plugin = new org.pgsqlite.SQLitePlugin();
+                plugin.privateInitialize(this.getServiceName(), this.cordova, this.webView, this.preferences);
+            }
+
             return plugin.execute(actionAsString, args, cbc);
         }
 
