@@ -35,6 +35,10 @@
                 <param name="android-package" value="io.liteglue.SQLitePlugin"/>
             </feature>
         </config-file>
+        
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
+        </config-file>
 
         <source-file src="src/android/io/liteglue/SQLitePlugin.java" target-dir="src/io/liteglue"/>
         <source-file src="src/android/io/liteglue/SQLiteAndroidDatabase.java" target-dir="src/io/liteglue"/>
