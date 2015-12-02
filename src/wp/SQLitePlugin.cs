@@ -29,7 +29,7 @@ namespace Cordova.Extension.Commands
             public string name { get; set; }
 
             [DataMember(IsRequired = true, Name = "createFromResource")]
-            public bool createFromResource { get; set; }
+            public int createFromResource { get; set; }
 
             [DataMember(IsRequired = false, Name = "location", EmitDefaultValue = false)]
             public int location = 0;
