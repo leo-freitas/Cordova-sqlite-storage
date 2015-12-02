@@ -229,7 +229,7 @@ namespace Cordova.Extension.Commands
                     if (importarBanco)
                     {
                         System.Diagnostics.Debug.WriteLine("vai copiar db.");
-                        importarBanco = false;
+                        importarBanco = 0;
                         copyDB(dbname);
                         System.Diagnostics.Debug.WriteLine("depois copyDB.");
                     }
