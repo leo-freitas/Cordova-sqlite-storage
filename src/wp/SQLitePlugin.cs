@@ -226,7 +226,7 @@ namespace Cordova.Extension.Commands
                 DBRunner runner;
                 lock (runnersLock)
                 {
-                    if (importarBanco)
+                    if (importarBanco == 1)
                     {
                         System.Diagnostics.Debug.WriteLine("vai copiar db.");
                         importarBanco = 0;
