@@ -187,14 +187,14 @@ namespace Cordova.Extension.Commands
             private readonly BaseCommand plugin;
             private readonly IDictionary<string, DBRunner> runners = new Dictionary<string, DBRunner>();
             private readonly object runnersLock = new object();
-            private bool importarBanco = false;
+            private int importarBanco = 0;
 
             public DatabaseManager(BaseCommand plugin)
             {
                 this.plugin = plugin;
             }
 
-            public void setImportarBanco(bool importarBanco)
+            public void setImportarBanco(int importarBanco)
             {
                 this.importarBanco = importarBanco;
             }
