@@ -28,7 +28,7 @@ namespace Cordova.Extension.Commands
             [DataMember(IsRequired = true, Name = "name")]
             public string name { get; set; }
 
-            [DataMember(IsRequired = true, Name = "createFromResource")]
+            [DataMember(IsRequired = false, Name = "createFromResource")]
             public int createFromResource { get; set; }
 
             [DataMember(IsRequired = false, Name = "location", EmitDefaultValue = false)]
