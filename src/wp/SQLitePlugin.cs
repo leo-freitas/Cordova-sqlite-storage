@@ -6,14 +6,12 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Threading;
 
-using SQLite;
-
 using WPCordovaClassLib.Cordova;
 using WPCordovaClassLib.Cordova.Commands;
 using WPCordovaClassLib.Cordova.JSON;
 using Windows.Storage;
 using Windows.ApplicationModel;
-using System.Threading.Tasks;
+using SQLite;
 
 namespace Cordova.Extension.Commands
 {
@@ -84,7 +82,7 @@ namespace Cordova.Extension.Commands
             /// Query string
             /// </summary>
             [DataMember(IsRequired = true, Name = "sql")]
-            public string query { get; set; }
+            public string[] query { get; set; }
 
             /// <summary>
             /// Query parameters
@@ -381,8 +379,11 @@ namespace Cordova.Extension.Commands
                 {
                     // As a query can be requested for the callback for "open" has been completed, 
                     // the thread may not be started by the open request, in which case no open callback id
-                    this.db = new SQLiteConnection(this.DatabaseName);
-
+                    this.db = new SQLiteConnection(Path.Combine(ApplicationData.Current.LocalFolder.Path, this.DatabaseName));
+                    this.db.Execute("PRAGMA temp_store=MEMORY;");
+                    this.db.Execute("PRAGMA page_size=4096;");
+                    this.db.Execute("PRAGMA synchronous=off ;");
+                    this.db.Execute("PRAGMA ignore_check_constraints=on ;");
                     if (openCalllbackId != null)
                     {
                         this.databases.Ok(openCalllbackId);
@@ -497,182 +498,185 @@ namespace Cordova.Extension.Commands
                 // loop through the sql in the transaction
                 foreach (SQLitePluginTransaction transaction in dbq.Queries)
                 {
-                    string resultString = "";
-                    string errorMessage = "unknown";
-                    bool needQuery = true;
-
-                    // begin
-                    if (transaction.query.StartsWith("BEGIN", StringComparison.OrdinalIgnoreCase))
+                    foreach(String query in transaction.query)
                     {
-                        needQuery = false;
-
-                        try
+                        string resultString = "";
+                        string errorMessage = "unknown";
+                        bool needQuery = true;
+                        // begin
+                        if (query.StartsWith("BEGIN", StringComparison.OrdinalIgnoreCase))
                         {
-                            this.db.BeginTransaction();
+                            needQuery = false;
 
-                            resultString = "\"rowsAffected\":0";
-
-                        }
-                        catch (Exception e)
-                        {
-                            errorMessage = e.Message;
-                        }
-
-                    }
-
-                    // commit
-                    if (transaction.query.StartsWith("COMMIT", StringComparison.OrdinalIgnoreCase))
-                    {
-                        needQuery = false;
-
-                        try
-                        {
-                            this.db.Commit();
-
-                            resultString = "\"rowsAffected\":0";
-                        }
-                        catch (Exception e)
-                        {
-                            errorMessage = e.Message;
-                        }
-                    }
-
-                    // rollback
-                    if (transaction.query.StartsWith("ROLLBACK", StringComparison.OrdinalIgnoreCase))
-                    {
-                        needQuery = false;
-
-                        try
-                        {
-                            this.db.Rollback();
-
-                            resultString = "\"rowsAffected\":0";
-                        }
-                        catch (Exception e)
-                        {
-                            errorMessage = e.Message;
-                        }
-
-                    }
-
-                    // create/drop table
-                    if (transaction.query.IndexOf("DROP TABLE", StringComparison.OrdinalIgnoreCase) > -1 || transaction.query.IndexOf("CREATE TABLE", StringComparison.OrdinalIgnoreCase) > -1)
-                    {
-                        needQuery = false;
-
-                        try
-                        {
-                            var results = db.Execute(transaction.query, transaction.query_params);
-
-                            resultString = "\"rowsAffected\":0";
-                        }
-                        catch (Exception e)
-                        {
-                            errorMessage = e.Message;
-                        }
-
-                    }
-
-                    // insert/update/delete
-                    if (transaction.query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase) ||
-                        transaction.query.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) ||
-                        transaction.query.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase))
-                    {
-                        needQuery = false;
-
-                        try
-                        {
-                            // execute our query
-                            var res = db.Execute(transaction.query, transaction.query_params);
-
-                            // get the primary key of the last inserted row
-                            var insertId = SQLite3.LastInsertRowid(db.Handle);
-
-                            resultString = String.Format("\"rowsAffected\":{0}", res);
-
-                            if (transaction.query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
+                            try
                             {
-                                resultString += String.Format(",\"insertId\":{0}", insertId);
+                                this.db.BeginTransaction();
+
+                                resultString = "\"rowsAffected\":0";
+
+                            }
+                            catch (Exception e)
+                            {
+                                errorMessage = e.Message;
                             }
 
                         }
-                        catch (Exception e)
+
+                        // commit
+                        if (query.StartsWith("COMMIT", StringComparison.OrdinalIgnoreCase))
                         {
-                            errorMessage = e.Message;
-                        }
-                    }
+                            needQuery = false;
 
-                    if (needQuery)
-                    {
-                        try
-                        {
-                            var results = this.db.Query2(transaction.query, transaction.query_params);
-
-                            string rowsString = "";
-
-                            foreach (SQLiteQueryRow res in results)
+                            try
                             {
-                                string rowString = "";
+                                this.db.Commit();
 
-                                if (rowsString.Length != 0) rowsString += ",";
+                                resultString = "\"rowsAffected\":0";
+                            }
+                            catch (Exception e)
+                            {
+                                errorMessage = e.Message;
+                            }
+                        }
 
-                                foreach (SQLiteQueryColumn column in res.column)
+                        // rollback
+                        if (query.StartsWith("ROLLBACK", StringComparison.OrdinalIgnoreCase))
+                        {
+                            needQuery = false;
+
+                            try
+                            {
+                                this.db.Rollback();
+
+                                resultString = "\"rowsAffected\":0";
+                            }
+                            catch (Exception e)
+                            {
+                                errorMessage = e.Message;
+                            }
+
+                        }
+
+                        // create/drop table
+                        if (query.IndexOf("DROP TABLE", StringComparison.OrdinalIgnoreCase) > -1 || query.IndexOf("CREATE TABLE", StringComparison.OrdinalIgnoreCase) > -1)
+                        {
+                            needQuery = false;
+
+                            try
+                            {
+                                var results = db.Execute(query, transaction.query_params);
+
+                                resultString = "\"rowsAffected\":0";
+                            }
+                            catch (Exception e)
+                            {
+                                errorMessage = e.Message;
+                            }
+
+                        }
+
+                        // insert/update/delete
+                        if (query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase) ||
+                            query.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) ||
+                            query.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase))
+                        {
+                            needQuery = false;
+
+                            try
+                            {
+                                var ti = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                                // execute our query
+                                var res = db.Execute(query, transaction.query_params);
+
+                                // get the primary key of the last inserted row
+                                var insertId = SQLite3.LastInsertRowid(db.Handle);
+
+                                resultString = String.Format("\"rowsAffected\":{0}", res);
+
+                                if (query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    if (rowString.Length != 0) rowString += ",";
+                                    resultString += String.Format(",\"insertId\":{0}", insertId);
+                                }
+                                var tf = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                                System.Diagnostics.Debug.WriteLine("TEMPO: " + (tf - ti));
+                            }
+                            catch (Exception e)
+                            {
+                                errorMessage = e.Message;
+                            }
+                        }
 
-                                    if (column.Value != null)
+                        if (needQuery)
+                        {
+                            try
+                            {
+                                var results = this.db.CustomQuery(query, transaction.query_params);
+                                string rowsString = "";
+
+                                foreach (SQLiteQueryRow res in results)
+                                {
+                                    string rowString = "";
+
+                                    if (rowsString.Length != 0) rowsString += ",";
+
+                                    foreach (SQLiteQueryColumn column in res.column)
                                     {
-                                        if (column.Value.GetType().Equals(typeof(Int32)))
+                                        if (rowString.Length != 0) rowString += ",";
+
+                                        if (column.Value != null)
                                         {
-                                            rowString += String.Format("\"{0}\":{1}",
-                                                column.Key, Convert.ToInt32(column.Value));
-                                        }
-                                        else if (column.Value.GetType().Equals(typeof(Double)))
-                                        {
-                                            rowString += String.Format(CultureInfo.InvariantCulture, "\"{0}\":{1}",
-                                                column.Key, Convert.ToDouble(column.Value, CultureInfo.InvariantCulture));
+                                            if (column.Value.GetType().Equals(typeof(Int32)))
+                                            {
+                                                rowString += String.Format("\"{0}\":{1}",
+                                                    column.Key, Convert.ToInt32(column.Value));
+                                            }
+                                            else if (column.Value.GetType().Equals(typeof(Double)))
+                                            {
+                                                rowString += String.Format(CultureInfo.InvariantCulture, "\"{0}\":{1}",
+                                                    column.Key, Convert.ToDouble(column.Value, CultureInfo.InvariantCulture));
+                                            }
+                                            else
+                                            {
+                                                rowString += String.Format("\"{0}\":\"{1}\"",
+                                                    column.Key,
+                                                    column.Value.ToString()
+                                                        .Replace("\\", "\\\\")
+                                                        .Replace("\"", "\\\"")
+                                                        .Replace("\t", "\\t")
+                                                        .Replace("\r", "\\r")
+                                                        .Replace("\n", "\\n")
+                                                );
+                                            }
                                         }
                                         else
                                         {
-                                            rowString += String.Format("\"{0}\":\"{1}\"",
-                                                column.Key,
-                                                column.Value.ToString()
-                                                    .Replace("\\","\\\\")
-                                                    .Replace("\"","\\\"")
-                                                    .Replace("\t","\\t")
-                                                    .Replace("\r","\\r")
-                                                    .Replace("\n","\\n")
-                                            );
+                                            rowString += String.Format("\"{0}\":null", column.Key);
                                         }
-                                    }
-                                    else
-                                    {
-                                        rowString += String.Format("\"{0}\":null", column.Key);
+
                                     }
 
+                                    rowsString += "{" + rowString + "}";
                                 }
 
-                                rowsString += "{" + rowString + "}";
+                                resultString = "\"rows\":[" + rowsString + "]";
                             }
-
-                            resultString = "\"rows\":[" + rowsString + "]";
+                            catch (Exception e)
+                            {
+                                errorMessage = e.Message;
+                            }
                         }
-                        catch (Exception e)
+
+                        if (batchResultsStr.Length != 0) batchResultsStr += ",";
+
+                        if (resultString.Length != 0)
                         {
-                            errorMessage = e.Message;
+                            batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"success\",\"result\":{" + resultString + "}}";
+                            //System.Diagnostics.Debug.WriteLine("batchResultsStr: " + batchResultsStr);
                         }
-                    }
-
-                    if (batchResultsStr.Length != 0) batchResultsStr += ",";
-
-                    if (resultString.Length != 0)
-                    {
-                        batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"success\",\"result\":{" + resultString + "}}";
-                        //System.Diagnostics.Debug.WriteLine("batchResultsStr: " + batchResultsStr);
-                    }
-                    else
-                    {
-                        batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"error\",\"result\":{\"message\":\"" + errorMessage.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"}}";
+                        else
+                        {
+                            batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"error\",\"result\":{\"message\":\"" + errorMessage.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"}}";
+                        }
                     }
                 }
 
@@ -759,6 +763,75 @@ namespace Cordova.Extension.Commands
                     items.Enqueue(value);
                     Monitor.PulseAll(locker);
                 }
+            }
+        }
+    }
+}
+namespace SQLite
+{
+    public partial class SQLiteConnection
+    {
+        public List<SQLiteQueryRow> CustomQuery(string query, params object[] args)
+        {
+            var cmd = CreateCommand(query, args);
+            return cmd.ExecuteCustomQuery();
+        }
+    }
+    public class SQLiteQueryRow
+    {
+        public List<SQLiteQueryColumn> column;
+    }
+    public class SQLiteQueryColumn
+    {
+        public string Key;
+        public object Value;
+    }
+    public partial class SQLiteCommand
+    {
+        public List<SQLiteQueryRow> ExecuteCustomQuery()
+        {
+            var stmt = Prepare();
+            try
+            {
+                var cols = new TableMapping.Column[SQLite3.ColumnCount(stmt)];
+                var colLenght = cols.Length;
+                var lstRes = new List<SQLiteQueryRow>();
+                while (SQLite3.Step(stmt) == SQLite3.Result.Row)
+                {
+                    var obj = new SQLiteQueryRow();
+                    obj.column = new List<SQLiteQueryColumn>();
+                    for (int i = 0; i < colLenght; i++)
+                    {
+                        var col = new SQLiteQueryColumn();
+                        var colType = SQLite3.ColumnType(stmt, i);
+                        switch (colType)
+                        {
+                            case SQLite3.ColType.Blob:
+                                col.Value = SQLite3.ColumnBlob(stmt, i);
+                                break;
+                            case SQLite3.ColType.Float:
+                                col.Value = SQLite3.ColumnDouble(stmt, i);
+                                break;
+                            case SQLite3.ColType.Integer:
+                                col.Value = SQLite3.ColumnInt(stmt, i);
+                                break;
+                            case SQLite3.ColType.Null:
+                                col.Value = null;
+                                break;
+                            case SQLite3.ColType.Text:
+                                col.Value = SQLite3.ColumnString(stmt, i);
+                                break;
+                        }
+                        col.Key = SQLite3.ColumnName16(stmt, i);
+                        obj.column.Add(col);
+                    }
+                    lstRes.Add(obj);
+                }
+                return lstRes;
+            }
+            finally
+            {
+                SQLite3.Finalize(stmt);
             }
         }
     }
