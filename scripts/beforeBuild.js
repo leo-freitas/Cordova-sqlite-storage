@@ -8,8 +8,6 @@ var fs = require('fs'), pathCordovaLib = process.cwd() + '/../node_modules/cordo
     cfg = new ConfigParser(projectXml), exec = require('child_process').execSync;
 
 console.log('==================================================== Replace SQLITE ===================================================');
-console.log('platforms/wp8/' + cfg.name().replace(' ','_') + '.csproj');
-console.log(process.env.PWD);
 var fileContent = fs.readFileSync('platforms/wp8/' + cfg.name().replace(' ','_') + '.csproj').toString();
 if (fileContent.indexOf('USE_WP8_NATIVE_SQLITE') === -1) {
 	fileContent = fileContent.replace(/SILVERLIGHT;WINDOWS_PHONE/gm,'SILVERLIGHT;WINDOWS_PHONE;USE_WP8_NATIVE_SQLITE');
@@ -20,6 +18,6 @@ if (fileContent.indexOf('SQLite.WP80') === -1) {
 	fileContent = fileContent.replace('</ItemGroup>',item);
 }
 fs.writeFileSync('platforms/wp8/' + cfg.name().replace(' ','_') + '.csproj', fileContent);
-
-exec('binpkg/nuget update Sisu.csproj -Id sqlite-net -repositoryPath packages', {cwd: 'platforms/wp8/'});
-exec('binpkg/nuget update Sisu.csproj -Id sqlite-net-wp8 -repositoryPath packages', {cwd: 'platforms/wp8/'});	
+var path = process.env.PWD + '\\platforms\\wp8';
+exec('binpkg\\nuget update ' + cfg.name().replace(' ','_') + '.sln -Id sqlite-net', {cwd: path});
+exec('binpkg\\nuget update ' + cfg.name().replace(' ','_') + '.sln -Id sqlite-net-wp8', {cwd: path});
