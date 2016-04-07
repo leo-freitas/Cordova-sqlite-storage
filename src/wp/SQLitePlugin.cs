@@ -498,185 +498,183 @@ namespace Cordova.Extension.Commands
                 // loop through the sql in the transaction
                 foreach (SQLitePluginTransaction transaction in dbq.Queries)
                 {
-                    foreach(String query in transaction.query)
+                    String query in transaction.query;
+                    string resultString = "";
+                    string errorMessage = "unknown";
+                    bool needQuery = true;
+                    // begin
+                    if (query.StartsWith("BEGIN", StringComparison.OrdinalIgnoreCase))
                     {
-                        string resultString = "";
-                        string errorMessage = "unknown";
-                        bool needQuery = true;
-                        // begin
-                        if (query.StartsWith("BEGIN", StringComparison.OrdinalIgnoreCase))
+                        needQuery = false;
+
+                        try
                         {
-                            needQuery = false;
+                            this.db.BeginTransaction();
 
-                            try
-                            {
-                                this.db.BeginTransaction();
-
-                                resultString = "\"rowsAffected\":0";
-
-                            }
-                            catch (Exception e)
-                            {
-                                errorMessage = e.Message;
-                            }
+                            resultString = "\"rowsAffected\":0";
 
                         }
-
-                        // commit
-                        if (query.StartsWith("COMMIT", StringComparison.OrdinalIgnoreCase))
+                        catch (Exception e)
                         {
-                            needQuery = false;
-
-                            try
-                            {
-                                this.db.Commit();
-
-                                resultString = "\"rowsAffected\":0";
-                            }
-                            catch (Exception e)
-                            {
-                                errorMessage = e.Message;
-                            }
+                            errorMessage = e.Message;
                         }
 
-                        // rollback
-                        if (query.StartsWith("ROLLBACK", StringComparison.OrdinalIgnoreCase))
+                    }
+
+                    // commit
+                    if (query.StartsWith("COMMIT", StringComparison.OrdinalIgnoreCase))
+                    {
+                        needQuery = false;
+
+                        try
                         {
-                            needQuery = false;
+                            this.db.Commit();
 
-                            try
-                            {
-                                this.db.Rollback();
+                            resultString = "\"rowsAffected\":0";
+                        }
+                        catch (Exception e)
+                        {
+                            errorMessage = e.Message;
+                        }
+                    }
 
-                                resultString = "\"rowsAffected\":0";
-                            }
-                            catch (Exception e)
-                            {
-                                errorMessage = e.Message;
-                            }
+                    // rollback
+                    if (query.StartsWith("ROLLBACK", StringComparison.OrdinalIgnoreCase))
+                    {
+                        needQuery = false;
 
+                        try
+                        {
+                            this.db.Rollback();
+
+                            resultString = "\"rowsAffected\":0";
+                        }
+                        catch (Exception e)
+                        {
+                            errorMessage = e.Message;
                         }
 
-                        // create/drop table
-                        if (query.IndexOf("DROP TABLE", StringComparison.OrdinalIgnoreCase) > -1 || query.IndexOf("CREATE TABLE", StringComparison.OrdinalIgnoreCase) > -1)
+                    }
+
+                    // create/drop table
+                    if (query.IndexOf("DROP TABLE", StringComparison.OrdinalIgnoreCase) > -1 || query.IndexOf("CREATE TABLE", StringComparison.OrdinalIgnoreCase) > -1)
+                    {
+                        needQuery = false;
+
+                        try
                         {
-                            needQuery = false;
+                            var results = db.Execute(query, transaction.query_params);
 
-                            try
-                            {
-                                var results = db.Execute(query, transaction.query_params);
-
-                                resultString = "\"rowsAffected\":0";
-                            }
-                            catch (Exception e)
-                            {
-                                errorMessage = e.Message;
-                            }
-
+                            resultString = "\"rowsAffected\":0";
+                        }
+                        catch (Exception e)
+                        {
+                            errorMessage = e.Message;
                         }
 
-                        // insert/update/delete
-                        if (query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase) ||
-                            query.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) ||
-                            query.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase))
+                    }
+
+                    // insert/update/delete
+                    if (query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase) ||
+                        query.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) ||
+                        query.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        needQuery = false;
+
+                        try
                         {
-                            needQuery = false;
+                            var ti = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                            // execute our query
+                            var res = db.Execute(query, transaction.query_params);
 
-                            try
+                            // get the primary key of the last inserted row
+                            var insertId = SQLite3.LastInsertRowid(db.Handle);
+
+                            resultString = String.Format("\"rowsAffected\":{0}", res);
+
+                            if (query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
                             {
-                                var ti = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                                // execute our query
-                                var res = db.Execute(query, transaction.query_params);
+                                resultString += String.Format(",\"insertId\":{0}", insertId);
+                            }
+                            var tf = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                            System.Diagnostics.Debug.WriteLine("TEMPO: " + (tf - ti));
+                        }
+                        catch (Exception e)
+                        {
+                            errorMessage = e.Message;
+                        }
+                    }
 
-                                // get the primary key of the last inserted row
-                                var insertId = SQLite3.LastInsertRowid(db.Handle);
+                    if (needQuery)
+                    {
+                        try
+                        {
+                            var results = this.db.CustomQuery(query, transaction.query_params);
+                            string rowsString = "";
 
-                                resultString = String.Format("\"rowsAffected\":{0}", res);
+                            foreach (SQLiteQueryRow res in results)
+                            {
+                                string rowString = "";
 
-                                if (query.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
+                                if (rowsString.Length != 0) rowsString += ",";
+
+                                foreach (SQLiteQueryColumn column in res.column)
                                 {
-                                    resultString += String.Format(",\"insertId\":{0}", insertId);
-                                }
-                                var tf = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                                System.Diagnostics.Debug.WriteLine("TEMPO: " + (tf - ti));
-                            }
-                            catch (Exception e)
-                            {
-                                errorMessage = e.Message;
-                            }
-                        }
+                                    if (rowString.Length != 0) rowString += ",";
 
-                        if (needQuery)
-                        {
-                            try
-                            {
-                                var results = this.db.CustomQuery(query, transaction.query_params);
-                                string rowsString = "";
-
-                                foreach (SQLiteQueryRow res in results)
-                                {
-                                    string rowString = "";
-
-                                    if (rowsString.Length != 0) rowsString += ",";
-
-                                    foreach (SQLiteQueryColumn column in res.column)
+                                    if (column.Value != null)
                                     {
-                                        if (rowString.Length != 0) rowString += ",";
-
-                                        if (column.Value != null)
+                                        if (column.Value.GetType().Equals(typeof(Int32)))
                                         {
-                                            if (column.Value.GetType().Equals(typeof(Int32)))
-                                            {
-                                                rowString += String.Format("\"{0}\":{1}",
-                                                    column.Key, Convert.ToInt32(column.Value));
-                                            }
-                                            else if (column.Value.GetType().Equals(typeof(Double)))
-                                            {
-                                                rowString += String.Format(CultureInfo.InvariantCulture, "\"{0}\":{1}",
-                                                    column.Key, Convert.ToDouble(column.Value, CultureInfo.InvariantCulture));
-                                            }
-                                            else
-                                            {
-                                                rowString += String.Format("\"{0}\":\"{1}\"",
-                                                    column.Key,
-                                                    column.Value.ToString()
-                                                        .Replace("\\", "\\\\")
-                                                        .Replace("\"", "\\\"")
-                                                        .Replace("\t", "\\t")
-                                                        .Replace("\r", "\\r")
-                                                        .Replace("\n", "\\n")
-                                                );
-                                            }
+                                            rowString += String.Format("\"{0}\":{1}",
+                                                column.Key, Convert.ToInt32(column.Value));
+                                        }
+                                        else if (column.Value.GetType().Equals(typeof(Double)))
+                                        {
+                                            rowString += String.Format(CultureInfo.InvariantCulture, "\"{0}\":{1}",
+                                                column.Key, Convert.ToDouble(column.Value, CultureInfo.InvariantCulture));
                                         }
                                         else
                                         {
-                                            rowString += String.Format("\"{0}\":null", column.Key);
+                                            rowString += String.Format("\"{0}\":\"{1}\"",
+                                                column.Key,
+                                                column.Value.ToString()
+                                                    .Replace("\\", "\\\\")
+                                                    .Replace("\"", "\\\"")
+                                                    .Replace("\t", "\\t")
+                                                    .Replace("\r", "\\r")
+                                                    .Replace("\n", "\\n")
+                                            );
                                         }
-
+                                    }
+                                    else
+                                    {
+                                        rowString += String.Format("\"{0}\":null", column.Key);
                                     }
 
-                                    rowsString += "{" + rowString + "}";
                                 }
 
-                                resultString = "\"rows\":[" + rowsString + "]";
+                                rowsString += "{" + rowString + "}";
                             }
-                            catch (Exception e)
-                            {
-                                errorMessage = e.Message;
-                            }
-                        }
 
-                        if (batchResultsStr.Length != 0) batchResultsStr += ",";
+                            resultString = "\"rows\":[" + rowsString + "]";
+                        }
+                        catch (Exception e)
+                        {
+                            errorMessage = e.Message;
+                        }
+                    }
 
-                        if (resultString.Length != 0)
-                        {
-                            batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"success\",\"result\":{" + resultString + "}}";
-                            //System.Diagnostics.Debug.WriteLine("batchResultsStr: " + batchResultsStr);
-                        }
-                        else
-                        {
-                            batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"error\",\"result\":{\"message\":\"" + errorMessage.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"}}";
-                        }
+                    if (batchResultsStr.Length != 0) batchResultsStr += ",";
+
+                    if (resultString.Length != 0)
+                    {
+                        batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"success\",\"result\":{" + resultString + "}}";
+                        //System.Diagnostics.Debug.WriteLine("batchResultsStr: " + batchResultsStr);
+                    }
+                    else
+                    {
+                        batchResultsStr += "{\"qid\":\"" + transaction.queryId + "\",\"type\":\"error\",\"result\":{\"message\":\"" + errorMessage.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"}}";
                     }
                 }
 

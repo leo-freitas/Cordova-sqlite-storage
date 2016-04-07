@@ -356,9 +356,6 @@
         params.push((v === null || v === void 0 || t === 'number' || t === 'string' ? v : v instanceof Blob ? v.valueOf() : v.toString()));
       }
     }
-    if (typeof sql === "string") {
-        sql = [sql];
-    }
     this.executes.push({
       success: success,
       error: error,
