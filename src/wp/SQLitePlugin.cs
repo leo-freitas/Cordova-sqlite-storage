@@ -82,7 +82,7 @@ namespace Cordova.Extension.Commands
             /// Query string
             /// </summary>
             [DataMember(IsRequired = true, Name = "sql")]
-            public string[] query { get; set; }
+            public string query { get; set; }
 
             /// <summary>
             /// Query parameters
@@ -498,7 +498,7 @@ namespace Cordova.Extension.Commands
                 // loop through the sql in the transaction
                 foreach (SQLitePluginTransaction transaction in dbq.Queries)
                 {
-                    String query in transaction.query;
+                    String query = transaction.query;
                     string resultString = "";
                     string errorMessage = "unknown";
                     bool needQuery = true;
@@ -583,7 +583,6 @@ namespace Cordova.Extension.Commands
 
                         try
                         {
-                            var ti = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                             // execute our query
                             var res = db.Execute(query, transaction.query_params);
 
@@ -596,8 +595,6 @@ namespace Cordova.Extension.Commands
                             {
                                 resultString += String.Format(",\"insertId\":{0}", insertId);
                             }
-                            var tf = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                            System.Diagnostics.Debug.WriteLine("TEMPO: " + (tf - ti));
                         }
                         catch (Exception e)
                         {
