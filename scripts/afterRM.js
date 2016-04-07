@@ -14,5 +14,5 @@ if (!fileContent) {
 	return;
 }
 fileContent = fileContent.toString();
-fileContent = fileContent.replace('TRACE;DEBUG;SILVERLIGHT;WINDOWS_PHONE;USE_WP8_NATIVE_SQLITE','TRACE;DEBUG;SILVERLIGHT;WINDOWS_PHONE');
+fileContent = fileContent.replace('/USE_WP8_NATIVE_SQLITE/gm','');
 fs.writeFileSync('platforms/wp8/' + cfg.name().replace(' ','_') + '.csproj', fileContent);
