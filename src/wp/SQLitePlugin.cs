@@ -381,9 +381,6 @@ namespace Cordova.Extension.Commands
                     // the thread may not be started by the open request, in which case no open callback id
                     this.db = new SQLiteConnection(Path.Combine(ApplicationData.Current.LocalFolder.Path, this.DatabaseName));
                     this.db.Execute("PRAGMA temp_store=MEMORY;");
-                    this.db.Execute("PRAGMA page_size=4096;");
-                    this.db.Execute("PRAGMA synchronous=off ;");
-                    this.db.Execute("PRAGMA ignore_check_constraints=on ;");
                     if (openCalllbackId != null)
                     {
                         this.databases.Ok(openCalllbackId);
