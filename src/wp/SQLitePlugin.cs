@@ -808,7 +808,7 @@ namespace SQLite
                                 col.Value = SQLite3.ColumnDouble(stmt, i);
                                 break;
                             case SQLite3.ColType.Integer:
-                                col.Value = SQLite3.ColumnInt(stmt, i);
+                                col.Value = SQLite3.ColumnInt64(stmt, i);
                                 break;
                             case SQLite3.ColType.Null:
                                 col.Value = null;
