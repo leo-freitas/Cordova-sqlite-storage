@@ -226,6 +226,8 @@ public class SQLitePlugin extends CordovaPlugin {
 
             SQLiteAndroidDatabase mydb = old_impl ? new SQLiteAndroidDatabase() : new SQLiteConnectorDatabase();
             mydb.open(dbfile);
+            mydb.executeSqlBatch(new String[]{"PRAGMA temp_store=MEMORY;"}, new JSONArray[0], new String[]{"p1"}, cbc);
+            mydb.executeSqlBatch(new String[]{"PRAGMA page_size=4096;"}, new JSONArray[0], new String[]{"p2"}, cbc);
 
             if (cbc != null) // XXX Android locking/closing BUG workaround
                 cbc.success();
