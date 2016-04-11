@@ -193,6 +193,8 @@ sqlite_regexp(sqlite3_context * context, int argc, sqlite3_value ** values) {
                     // XXX TODO: close the db handle & [perhaps] remove from openDBs!!
                 }
             }
+            sqlite3_exec(db,(const char*)"PRAGMA temp_store=MEMORY;", NULL, NULL, NULL);
+            sqlite3_exec(db,(const char*)"PRAGMA page_size=4096;", NULL, NULL, NULL);
         }
     }
 
