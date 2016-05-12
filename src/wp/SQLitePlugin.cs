@@ -623,6 +623,11 @@ namespace Cordova.Extension.Commands
                                             rowString += String.Format("\"{0}\":{1}",
                                                 column.Key, Convert.ToInt32(column.Value));
                                         }
+                                        else if (column.Value.GetType().Equals(typeof(Int64)))
+                                        {
+                                            rowString += String.Format("\"{0}\":{1}",
+                                                column.Key, Convert.ToInt64(column.Value));
+                                        }
                                         else if (column.Value.GetType().Equals(typeof(Double)))
                                         {
                                             rowString += String.Format(CultureInfo.InvariantCulture, "\"{0}\":{1}",
