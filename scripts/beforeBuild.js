@@ -28,7 +28,7 @@ if (fileContent.indexOf('USE_WP8_NATIVE_SQLITE') === -1) {
 }
 
 if (fileContent.indexOf('SQLite.WP80') === -1) {
-	var item = '</ItemGroup><ItemGroup> <SDKReference Include="SQLite.WP80, Version=3.13.0"> <Name>SQLite for Windows Phone</Name> </SDKReference></ItemGroup>';
+	var item = '</ItemGroup><ItemGroup> <SDKReference Include="SQLite.WP80, Version=3.14.1"> <Name>SQLite for Windows Phone</Name> </SDKReference></ItemGroup>';
 	fileContent = fileContent.replace('</ItemGroup>',item);
 }
 
